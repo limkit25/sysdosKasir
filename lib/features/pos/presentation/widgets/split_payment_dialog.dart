@@ -11,11 +11,15 @@ import '../../../shift/presentation/bloc/shift/shift_bloc.dart';
 class SplitPaymentDialog extends StatefulWidget {
   final int totalAmount;
   final PosBloc posBloc;
+  final int? shiftId;
+  final int? userId;
 
   const SplitPaymentDialog({
     Key? key,
     required this.totalAmount,
     required this.posBloc,
+    this.shiftId,
+    this.userId,
   }) : super(key: key);
 
   @override
@@ -213,6 +217,7 @@ class _SplitPaymentDialogState extends State<SplitPaymentDialog> {
                     onSelected: (String selection) {
                       _guestNameController.text = selection;
                       widget.posBloc.add(SetGuestName(selection));
+                      setState(() {});
                     },
                     fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
                       // Sync with our controller
@@ -246,6 +251,7 @@ class _SplitPaymentDialogState extends State<SplitPaymentDialog> {
                         onChanged: (val) {
                           _guestNameController.text = val;
                           widget.posBloc.add(SetGuestName(val.isEmpty ? null : val));
+                          setState(() {});
                         },
                       );
                     },
@@ -393,6 +399,9 @@ class _SplitPaymentDialogState extends State<SplitPaymentDialog> {
                           TextField(
                             controller: _paymentController,
                             enabled: !isLocked,
+                            onChanged: (val) {
+                              setState(() {});
+                            },
                             decoration: InputDecoration(
                               labelText: isDebt ? 'pos.debt_amount_split'.tr() : (isFixed ? 'pos.payment_amount_fix'.tr() : 'pos.payment_amount'.tr()),
                               border: const OutlineInputBorder(),
@@ -488,17 +497,21 @@ class _SplitPaymentDialogState extends State<SplitPaymentDialog> {
     int? userId;
     
     // Attempt to get current shift and user IDs
-    final shiftState = context.read<ShiftBloc>().state;
-    if (shiftState is ShiftActive) {
-      shiftId = shiftState.shift.id;
-      userId = shiftState.shift.userId;
+    try {
+      final shiftState = context.read<ShiftBloc>().state;
+      if (shiftState is ShiftActive) {
+        shiftId = shiftState.shift.id;
+        userId = shiftState.shift.userId;
+      }
+    } catch (e) {
+      debugPrint("SplitPaymentDialog: ShiftBloc not found");
     }
 
     widget.posBloc.add(ProcessPayment(
       paymentMethod: _selectedMethod,
       paymentAmount: _selectedMethod == 'DEBT' ? 0 : paymentAmount,
-      shiftId: shiftId,
-      userId: userId,
+      shiftId: widget.shiftId,
+      userId: widget.userId,
     ));
 
     Navigator.pop(context);

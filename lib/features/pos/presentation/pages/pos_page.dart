@@ -715,14 +715,37 @@ class _PosViewState extends State<PosView> {
                   onPressed: state.cart.isEmpty
                       ? null
                       : () {
-                          showDialog(
-                            context: context,
-                            builder: (dialogContext) => SplitPaymentDialog(
-                              totalAmount: state.finalTotal,
-                              posBloc: context.read<PosBloc>(),
-                            ),
-                          );
-                        },
+                    // Kita ambil data shift dengan aman sebelum memanggil dialog
+                    int? currentShiftId;
+                    int? currentUserId;
+
+                    try {
+                      final shiftState = context.read<ShiftBloc>().state;
+                      if (shiftState is ShiftActive) {
+                        currentShiftId = shiftState.shift.id;
+                        currentUserId = shiftState.shift.userId;
+                      }
+                    } catch (e) {
+                      debugPrint("Shift tidak ditemukan");
+                    }
+
+                    showDialog(
+                      context: context,
+                      builder: (dialogContext) => MultiBlocProvider(
+                        providers: [
+                          BlocProvider.value(value: context.read<PosBloc>()),
+                          if (currentShiftId != null) // Only if potentially available, but better to just provide it if we can
+                             BlocProvider.value(value: context.read<ShiftBloc>()),
+                        ],
+                        child: SplitPaymentDialog(
+                          totalAmount: state.finalTotal,
+                          posBloc: context.read<PosBloc>(),
+                          shiftId: currentShiftId, 
+                          userId: currentUserId,   
+                        ),
+                      ),
+                    );
+                  },
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     backgroundColor: Colors.blue,
@@ -756,22 +779,29 @@ class _PosViewState extends State<PosView> {
                           IconButton(
                             icon: const Icon(Icons.pause_circle_outline),
                             tooltip: 'Hold Order',
-                            onPressed: state.cart.isEmpty 
-                              ? null 
-                              : () {
-                                  int? shiftId;
-                                  int? userId;
-                                  final shiftState = context.read<ShiftBloc>().state;
-                                  if (shiftState is ShiftActive) {
-                                    shiftId = shiftState.shift.id;
-                                    userId = shiftState.shift.userId;
-                                  }
-                                  
-                                  context.read<PosBloc>().add(HoldOrder(shiftId: shiftId, userId: userId));
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('pos.order_held'.tr())),
-                                  );
-                                },
+                            onPressed: state.cart.isEmpty
+                                ? null
+                                : () {
+                              int? shiftId;
+                              int? userId;
+
+                              // Menggunakan try-catch agar kebal terhadap error Provider
+                              try {
+                                final shiftState = context.read<ShiftBloc>().state;
+                                if (shiftState is ShiftActive) {
+                                  shiftId = shiftState.shift.id;
+                                  userId = shiftState.shift.userId;
+                                }
+                              } catch (e) {
+                                // Jika ShiftBloc tidak ditemukan di route ini, biarkan kosong (aman)
+                                debugPrint("ShiftBloc tidak ditemukan, melanjutkan hold order tanpa shift.");
+                              }
+
+                              context.read<PosBloc>().add(HoldOrder(shiftId: shiftId, userId: userId));
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('pos.order_held'.tr())),
+                              );
+                            },
                           ),
                           IconButton(
                             icon: Badge(
@@ -779,16 +809,16 @@ class _PosViewState extends State<PosView> {
                               isLabelVisible: state.pendingTransactions.isNotEmpty,
                               child: const Icon(Icons.receipt_long),
                             ),
-                             tooltip: 'Pending Orders',
+                            tooltip: 'Pending Orders',
                             onPressed: () {
-                               _showPendingOrdersDialog(context);
+                              _showPendingOrdersDialog(context);
                             },
                           ),
                           IconButton(
                             icon: const Icon(Icons.delete_outline),
                             tooltip: 'Clear Cart',
                             onPressed: () {
-                               context.read<PosBloc>().add(ClearCart());
+                              context.read<PosBloc>().add(ClearCart());
                             },
                           ),
                         ],
@@ -821,10 +851,14 @@ class _PosViewState extends State<PosView> {
                               : () {
                                   int? shiftId;
                                   int? userId;
-                                  final shiftState = context.read<ShiftBloc>().state;
-                                  if (shiftState is ShiftActive) {
-                                    shiftId = shiftState.shift.id;
-                                    userId = shiftState.shift.userId;
+                                  try {
+                                    final shiftState = context.read<ShiftBloc>().state;
+                                    if (shiftState is ShiftActive) {
+                                      shiftId = shiftState.shift.id;
+                                      userId = shiftState.shift.userId;
+                                    }
+                                  } catch (e) {
+                                    debugPrint("ShiftBloc tidak ditemukan di phone mode");
                                   }
                                   
                                   context.read<PosBloc>().add(HoldOrder(shiftId: shiftId, userId: userId));

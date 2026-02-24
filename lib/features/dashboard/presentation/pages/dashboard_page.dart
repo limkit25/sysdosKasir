@@ -258,7 +258,16 @@ class _DashboardPageState extends State<DashboardPage> {
                                   
                                   if (!isShiftEnabled || shiftState is ShiftActive) {
                                     // Shift is active OR Shift requirement disabled, go to POS
-                                    Navigator.push(context, MaterialPageRoute(builder: (_) => const PosPage())).then((_) {
+                                    final shiftBloc = context.read<ShiftBloc>();
+                                    Navigator.push(
+                                      context, 
+                                      MaterialPageRoute(
+                                        builder: (_) => BlocProvider.value(
+                                          value: shiftBloc,
+                                          child: const PosPage(),
+                                        ),
+                                      ),
+                                    ).then((_) {
                                       if (context.mounted) {
                                         context.read<DashboardBloc>().add(LoadDashboardData());
                                       }
