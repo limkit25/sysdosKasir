@@ -90,345 +90,497 @@ class _DashboardPageState extends State<DashboardPage> {
           SystemNavigator.pop();
         },
         child: Scaffold(
-          appBar: AppBar(
-            title: Row(
-              children: [
-                Image.asset(
-                  'assets/images/splash.png',
-                  height: 40,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: BlocBuilder<AuthBloc, AuthState>(
-                    builder: (context, state) {
-                      if (state is AuthAuthenticated) {
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '${'dashboard.welcome'.tr()}, ${state.user.name}',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            Text(
-                              state.user.role,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: Colors.black87,
-                              ),
-                            ),
-                          ],
-                        );
-                      }
-                      return const SizedBox.shrink();
-                    },
-                  ),
-                ),
-              ],
-            ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.notifications_none),
-                onPressed: () {},
-              ),
-              IconButton(
-                icon: const Icon(Icons.person),
-                onPressed: () {},
-              ),
-            ],
-          ),
-          body: CustomScrollView(
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              SliverPadding(
-                padding: const EdgeInsets.all(16.0),
-                sliver: SliverList(
-                  delegate: SliverChildListDelegate([
-
-                    
-                    // Turnover Slides
-                    SizedBox(
-                      height: 140,
-                      child: BlocBuilder<DashboardBloc, DashboardState>(
-                        builder: (context, state) {
-                          if (state is DashboardLoading) {
-                            return const Center(child: CircularProgressIndicator());
-                          } else if (state is DashboardLoaded) {
-                            return PageView(
-                              controller: _pageController,
-                              onPageChanged: (index) {
-                                setState(() {
-                                  _currentPage = index;
-                                });
-                              },
-                              children: [
-                                _TurnoverCard(
-                                  title: 'Hari Ini',
-                                  amount: state.turnoverStats['today'] ?? 0,
-                                  color: Colors.blue,
-                                  icon: Icons.today,
-                                ),
-                                _TurnoverCard(
-                                  title: 'Bulan Ini',
-                                  amount: state.turnoverStats['thisMonth'] ?? 0,
-                                  color: Colors.green,
-                                  icon: Icons.calendar_month,
-                                ),
-                                _TurnoverCard(
-                                  title: 'Bulan Lalu',
-                                  amount: state.turnoverStats['lastMonth'] ?? 0,
-                                  color: Colors.orange,
-                                  icon: Icons.history,
-                                ),
-                              ],
-                            );
-                          } else if (state is DashboardError) {
-                            return Center(child: Text('Error: ${state.message}'));
-                          }
-                          return const SizedBox.shrink();
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    
-                    // Indicators
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(3, (index) {
-                        return Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 4.0),
-                          width: _currentPage == index ? 12.0 : 8.0,
-                          height: 8.0,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: _currentPage == index ? Colors.blue : Colors.grey.shade300,
-                          ),
-                        );
-                      }),
-                    ),
-
-                    const SizedBox(height: 24),
-                    Text(
-                      'dashboard.main_menu'.tr(),
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                    const SizedBox(height: 16),
-                  ]),
-                ),
-              ),
-              
-              // Grid Menu
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                sliver: SliverLayoutBuilder(
-                  builder: (context, constraints) {
-                    // Use a safe width if constraints are weird, but usually infinite in sliver cross axis?
-                    // Actually SliverLayoutBuilder constraints gives scrolling axis info. 
-                    // Cross axis logic needs BoxConstraints from LayoutBuilder usually.
-                    // But here we can just perform logic based on MediaQuery or LayoutBuilder up top?
-                     // A safe default for SliverGrid.
-                     
-                     // We can use SliverGrid.count directly.
-                     return SliverGrid.count(
-                        crossAxisCount: MediaQuery.of(context).size.width > 600 ? 4 : 2,
-                        crossAxisSpacing: 16,
-                        mainAxisSpacing: 16,
-                        children: [
-                          BlocConsumer<ShiftBloc, ShiftState>(
-                            listener: (context, shiftState) {
-                              if (shiftState is ShiftError) {
-                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(shiftState.message)));
-                              }
-                            },
-                            builder: (context, shiftState) {
-                              return _DashboardMenuCard(
-                                title: 'dashboard.pos_kasir'.tr(),
-                                icon: Icons.point_of_sale,
-                                color: Colors.blue,
-                                onTap: () {
-                                  // Check settings state
-                                  final settingsState = context.read<SettingsCubit>().state;
-                                  final isShiftEnabled = settingsState is SettingsLoaded ? settingsState.isShiftEnabled : true; // Default to true if not loaded
-                                  
-                                  if (!isShiftEnabled || shiftState is ShiftActive) {
-                                    // Shift is active OR Shift requirement disabled, go to POS
-                                    final shiftBloc = context.read<ShiftBloc>();
-                                    Navigator.push(
-                                      context, 
-                                      MaterialPageRoute(
-                                        builder: (_) => BlocProvider.value(
-                                          value: shiftBloc,
-                                          child: const PosPage(),
-                                        ),
-                                      ),
-                                    ).then((_) {
-                                      if (context.mounted) {
-                                        context.read<DashboardBloc>().add(LoadDashboardData());
-                                      }
-                                    });
-                                  } else if (shiftState is ShiftNone) {
-                                    // No active shift, ask to open shift
-                                    showDialog(
-                                      context: context,
-                                      builder: (dialogContext) => AlertDialog(
-                                        title: Text('dashboard.shift_belum_dibuka'.tr()),
-                                        content: Text('dashboard.harus_buka_shift'.tr()),
-                                        actions: [
-                                          TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text('dashboard.batal'.tr())),
-                                          ElevatedButton(
-                                            onPressed: () {
-                                              Navigator.pop(dialogContext); // Close dialog
-                                              Navigator.push(context, MaterialPageRoute(builder: (_) => const OpenShiftPage())).then((opened) {
-                                                if (opened == true && context.mounted) {
-                                                  // Shift opened successfully, refresh shift state
-                                                  context.read<ShiftBloc>().add(CheckActiveShift());
-                                                }
-                                              });
-                                            },
-                                            child: Text('dashboard.buka_kasir_sekarang'.tr()),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  } else if (shiftState is ShiftLoading) {
-                                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Memeriksa status shift...')));
-                                  }
-                                },
-                              );
-                            },
-                          ),
-                          _DashboardMenuCard(
-                            title: 'dashboard.management'.tr(),
-                            icon: Icons.inventory_2,
-                            color: Colors.orange,
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => const ManagementPage()),
-                              ).then((_) {
-                                if (context.mounted) {
-                                  context.read<DashboardBloc>().add(LoadDashboardData());
-                                }
-                              });
-                            },
-                          ),
-                          _DashboardMenuCard(
-                            title: 'dashboard.reports'.tr(),
-                            icon: Icons.bar_chart,
-                            color: Colors.green,
-                            onTap: () {},
-                          ),
-                          _DashboardMenuCard(
-                            title: 'dashboard.settings'.tr(),
-                            icon: Icons.settings,
-                            color: Colors.grey,
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => const SettingsPage()),
-                              );
-                            },
-                          ),
-                          _DashboardMenuCard(
-                            title: 'dashboard.shift_management'.tr(),
-                            icon: Icons.account_balance_wallet,
-                            color: Colors.teal,
-                            onTap: () {
-                               Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => const ShiftManagementPage()),
-                              );
-                            },
-                          ),
-                        ],
-                     );
-                  }
-                ),
-              ),
-              const SliverPadding(padding: EdgeInsets.only(bottom: 24)), 
+          backgroundColor: const Color(0xFFF2F3F8), // Soft grey background
+          body: Stack(
+            children: [
+              mainBody(context),
+              _buildAppBar(context),
+              SizedBox(
+                height: MediaQuery.of(context).padding.bottom,
+              )
             ],
           ),
         ),
       ),
     );
   }
+
+  Widget _buildAppBar(BuildContext context) {
+    return Column(
+      children: <Widget>[
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 1.0),
+            boxShadow: <BoxShadow>[
+              BoxShadow(
+                  color: Colors.grey.withValues(alpha: 0.2),
+                  offset: const Offset(0, 2),
+                  blurRadius: 8.0),
+            ],
+          ),
+          child: Padding(
+            padding: EdgeInsets.only(
+                top: MediaQuery.of(context).padding.top, left: 8, right: 8),
+            child: Row(
+              children: <Widget>[
+                Container(
+                  alignment: Alignment.centerLeft,
+                  width: AppBar().preferredSize.height + 40,
+                  height: AppBar().preferredSize.height,
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Image.asset('assets/images/splash.png'),
+                  ),
+                ),
+                Expanded(
+                  child: Center(
+                    child: Text(
+                      'Sysdos POS',
+                      style: TextStyle(
+                        fontSize: 22,
+                        color: Colors.black,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  width: AppBar().preferredSize.height + 40,
+                  height: AppBar().preferredSize.height,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: <Widget>[
+                      IconButton(
+                        icon: const Icon(Icons.notifications_none, color: Colors.grey),
+                        onPressed: () {},
+                      ),
+                    ],
+                  ),
+                )
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget mainBody(BuildContext context) {
+    return BlocBuilder<DashboardBloc, DashboardState>(
+      builder: (context, state) {
+        return ListView(
+          padding: EdgeInsets.only(
+            top: AppBar().preferredSize.height +
+                MediaQuery.of(context).padding.top +
+                24,
+            bottom: 62 + MediaQuery.of(context).padding.bottom,
+          ),
+          scrollDirection: Axis.vertical,
+          children: <Widget>[
+            _buildUserInfoSection(),
+            _buildTurnoverSection(state),
+            _buildQuickActionsTitle(),
+            _buildMenuGrid(context),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildUserInfoSection() {
+    return Padding(
+      padding: const EdgeInsets.only(left: 24, right: 24, top: 0, bottom: 16),
+      child: BlocBuilder<AuthBloc, AuthState>(
+        builder: (context, state) {
+          String userName = 'User';
+          String userRole = 'Role';
+          if (state is AuthAuthenticated) {
+            userName = state.user.name;
+            userRole = state.user.role;
+          }
+          return Row(
+            children: [
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      'dashboard.welcome'.tr(),
+                      textAlign: TextAlign.left,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w400,
+                        fontSize: 14,
+                        letterSpacing: 0.2,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    Text(
+                      userName,
+                      textAlign: TextAlign.left,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 22,
+                        letterSpacing: 0.27,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                width: 55,
+                height: 55,
+                decoration: BoxDecoration(
+                   shape: BoxShape.circle,
+                   boxShadow: [
+                     BoxShadow(color: Colors.blue.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4))
+                   ]
+                ),
+                child: CircleAvatar(
+                  backgroundColor: Colors.white,
+                  child: Text(userName.isNotEmpty ? userName[0].toUpperCase() : 'U', 
+                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue, fontSize: 20)),
+                ),
+              )
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildTurnoverSection(DashboardState state) {
+    if (state is DashboardLoading) {
+      return const Padding(
+        padding: EdgeInsets.all(24.0),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+    
+    if (state is DashboardLoaded) {
+      final today = state.turnoverStats['today'] ?? 0;
+      final thisMonth = state.turnoverStats['thisMonth'] ?? 0;
+      
+      return Column(
+        children: [
+           Padding(
+            padding: const EdgeInsets.only(left: 24, right: 24, top: 16, bottom: 18),
+            child: Row(
+              children: <Widget>[
+                Expanded(
+                  child: Text(
+                    'dashboard.turnover_summary'.tr(),
+                    textAlign: TextAlign.left,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 18,
+                      letterSpacing: 0.5,
+                      color: Colors.black,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          _TurnoverSummaryCard(
+            todayAmount: today,
+            monthlyAmount: thisMonth,
+          ),
+        ],
+      );
+    }
+    return const SizedBox.shrink();
+  }
+
+  Widget _buildQuickActionsTitle() {
+    return Padding(
+      padding: const EdgeInsets.only(left: 24, right: 24, top: 24, bottom: 16),
+      child: Text(
+        'dashboard.main_menu'.tr(),
+        style: TextStyle(
+          fontWeight: FontWeight.w600,
+          fontSize: 18,
+          letterSpacing: 0.5,
+          color: Colors.black,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMenuGrid(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: BlocBuilder<ShiftBloc, ShiftState>(
+        builder: (context, shiftState) {
+          return GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: MediaQuery.of(context).size.width > 600 ? 5 : 2,
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            childAspectRatio: 1.35,
+            children: [
+              _DashboardMenuCard(
+                title: 'dashboard.pos_kasir'.tr(),
+                icon: Icons.point_of_sale_rounded,
+                color: Colors.blue,
+                onTap: () => _handlePosNavigation(context, shiftState),
+              ),
+              _DashboardMenuCard(
+                title: 'dashboard.management'.tr(),
+                icon: Icons.inventory_2_rounded,
+                color: Colors.orange,
+                onTap: () {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const ManagementPage())).then((_) {
+                    if (context.mounted) context.read<DashboardBloc>().add(LoadDashboardData());
+                  });
+                },
+              ),
+              _DashboardMenuCard(
+                title: 'dashboard.reports'.tr(),
+                icon: Icons.insert_chart_rounded,
+                color: Colors.green,
+                onTap: () {},
+              ),
+              _DashboardMenuCard(
+                title: 'dashboard.shift_management'.tr(),
+                icon: Icons.account_balance_wallet_rounded,
+                color: Colors.teal,
+                onTap: () {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const ShiftManagementPage()));
+                },
+              ),
+              _DashboardMenuCard(
+                title: 'dashboard.settings'.tr(),
+                icon: Icons.settings_suggest_rounded,
+                color: Colors.blueGrey,
+                onTap: () {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsPage()));
+                },
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  void _handlePosNavigation(BuildContext context, ShiftState shiftState) {
+    final settingsState = context.read<SettingsCubit>().state;
+    final isShiftEnabled = settingsState is SettingsLoaded ? settingsState.isShiftEnabled : true;
+    
+    if (!isShiftEnabled || shiftState is ShiftActive) {
+      final shiftBloc = context.read<ShiftBloc>();
+      Navigator.push(
+        context, 
+        MaterialPageRoute(
+          builder: (_) => BlocProvider.value(
+            value: shiftBloc,
+            child: const PosPage(),
+          ),
+        ),
+      ).then((_) {
+        if (context.mounted) context.read<DashboardBloc>().add(LoadDashboardData());
+      });
+    } else if (shiftState is ShiftNone) {
+      _showOpenShiftDialog(context);
+    } else if (shiftState is ShiftLoading) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('dashboard.checking_shift'.tr())));
+    }
+  }
+
+  void _showOpenShiftDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('dashboard.shift_belum_dibuka'.tr()),
+        content: Text('dashboard.harus_buka_shift'.tr()),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text('dashboard.batal'.tr())),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const OpenShiftPage())).then((opened) {
+                if (opened == true && context.mounted) {
+                  context.read<ShiftBloc>().add(CheckActiveShift());
+                }
+              });
+            },
+            child: Text('dashboard.buka_kasir_sekarang'.tr()),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-class _TurnoverCard extends StatelessWidget {
-  final String title;
-  final int amount;
-  final Color color;
-  final IconData icon;
+class _TurnoverSummaryCard extends StatelessWidget {
+  final int todayAmount;
+  final int monthlyAmount;
 
-  const _TurnoverCard({
-    required this.title,
-    required this.amount,
-    required this.color,
-    required this.icon,
+  const _TurnoverSummaryCard({
+    required this.todayAmount,
+    required this.monthlyAmount,
   });
 
   @override
   Widget build(BuildContext context) {
     final currency = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 4),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [color.withOpacity(0.8), color],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+    
+    return Padding(
+      padding: const EdgeInsets.only(left: 24, right: 24, top: 0, bottom: 0),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(8.0),
+              bottomLeft: Radius.circular(8.0),
+              bottomRight: Radius.circular(8.0),
+              topRight: Radius.circular(68.0)),
+          boxShadow: <BoxShadow>[
+            BoxShadow(
+                color: Colors.grey.withValues(alpha: 0.2),
+                offset: const Offset(1.1, 1.1),
+                blurRadius: 10.0),
+          ],
         ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: color.withOpacity(0.3),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(20),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: Colors.white, size: 32),
-          ),
-          const SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: <Widget>[
+                   Padding(
+                    padding: const EdgeInsets.only(left: 4, bottom: 3),
+                    child: Text(
+                      'dashboard.today'.tr(),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: Colors.blue,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.only(left: 4, top: 2, bottom: 14),
+                child: Text(
+                  currency.format(todayAmount),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 28,
+                    letterSpacing: -0.2,
+                    color: Colors.black,
+                  ),
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                currency.format(amount),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
+              Container(
+                height: 2,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF2F3F8),
+                  borderRadius: const BorderRadius.all(Radius.circular(4.0)),
                 ),
               ),
+              Padding(
+                padding: const EdgeInsets.only(top: 16),
+                child: Row(
+                  children: <Widget>[
+                    _buildSubMetric(
+                       'dashboard.this_month'.tr(), 
+                       currency.format(monthlyAmount), 
+                       Colors.green
+                    ),
+                    const SizedBox(width: 16),
+                    _buildSubMetric(
+                       'dashboard.target'.tr(), 
+                       '85%', 
+                       Colors.orange,
+                       isProgress: true
+                    ),
+                  ],
+                ),
+              )
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSubMetric(String title, String value, Color color, {bool isProgress = false}) {
+    return Expanded(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            title,
+            style: TextStyle(
+              fontWeight: FontWeight.w500,
+              fontSize: 12,
+              letterSpacing: -0.2,
+              color: Colors.grey,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Row(
+              children: <Widget>[
+                Container(
+                  height: 38,
+                  width: 2,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.5),
+                    borderRadius: const BorderRadius.all(Radius.circular(4.0)),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        value,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: Colors.black,
+                        ),
+                      ),
+                      if (isProgress)
+                        Container(
+                          width: 60,
+                          height: 4,
+                          margin: const EdgeInsets.only(top: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade200,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                          child: FractionallySizedBox(
+                             alignment: Alignment.centerLeft,
+                             widthFactor: 0.85,
+                             child: Container(decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2))),
+                          ),
+                        )
+                    ],
+                  ),
+                )
+              ],
+            ),
+          )
         ],
       ),
     );
@@ -450,34 +602,56 @@ class _DashboardMenuCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, size: 36, color: color),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.15),
+            blurRadius: 10,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(24),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [color.withValues(alpha: 0.1), color.withValues(alpha: 0.2)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, size: 24, color: color),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
+

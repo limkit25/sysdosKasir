@@ -14,183 +14,341 @@ import '../../../../features/debt/presentation/pages/debt_page.dart';
 import '../../../settings/presentation/pages/payment_method_list_page.dart';
 import '../../../vouchers/presentation/pages/voucher_management_page.dart';
 
-class ManagementPage extends StatelessWidget {
+class ManagementPage extends StatefulWidget {
   const ManagementPage({super.key});
+
+  @override
+  State<ManagementPage> createState() => _ManagementPageState();
+}
+
+class _ManagementPageState extends State<ManagementPage> {
+  final TextEditingController _searchController = TextEditingController();
+  String _selectedCategory = 'All';
+  String _searchQuery = '';
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'inventory.management'.tr(),
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: ListView(
+      backgroundColor: const Color(0xFFF2F3F8),
+      body: Column(
         children: [
-          _buildSectionHeader(context, 'inventory.master_data'.tr()),
-          _buildMenuItem(
-            context,
-            'inventory.categories'.tr(),
-            'inventory.categories_desc'.tr(),
-            Icons.category,
-            Colors.orange,
-            () => Navigator.push(context, MaterialPageRoute(builder: (context) => const CategoryListPage())),
+          _buildAppBar(context),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildSearchBar(),
+                  _buildCategoryFilter(),
+                  _buildMenuSection(),
+                ],
+              ),
+            ),
           ),
-          _buildMenuItem(
-            context,
-            'inventory.items'.tr(),
-            'inventory.items_desc'.tr(),
-            Icons.inventory,
-            Colors.blue,
-            () => Navigator.push(context, MaterialPageRoute(builder: (context) => const ItemListPage())),
-          ),
-          
-          _buildSectionHeader(context, 'inventory.inventory_control'.tr()),
-          _buildMenuItem(
-            context,
-            'inventory.stock_management'.tr(),
-            'inventory.stock_management_desc'.tr(),
-            Icons.compare_arrows,
-            Colors.blueGrey,
-            () => Navigator.push(context, MaterialPageRoute(builder: (context) => const StockManagementPage())),
-          ),
-          _buildMenuItem(
-            context,
-            'inventory.stock_opname'.tr(),
-            'inventory.stock_opname_desc'.tr(),
-            Icons.fact_check,
-            Colors.blueGrey,
-            () {
-               Navigator.push(context, MaterialPageRoute(builder: (context) => const StockManagementPage(isOpname: true)));
-            },
-          ),
-
-          _buildSectionHeader(context, 'inventory.partners'.tr()),
-          _buildMenuItem(
-            context,
-            'inventory.customers'.tr(),
-            'inventory.customers_desc'.tr(),
-            Icons.people,
-            Colors.purple,
-            () => Navigator.push(context, MaterialPageRoute(builder: (context) => const CustomerListPage())),
-          ),
-          _buildMenuItem(
-            context,
-            'inventory.suppliers'.tr(),
-            'inventory.suppliers_desc'.tr(),
-            Icons.local_shipping,
-            Colors.purple,
-            () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SupplierListPage())),
-          ),
-
-          _buildSectionHeader(context, 'inventory.commerce'.tr()),
-          _buildMenuItem(
-            context,
-            'inventory.purchasing'.tr(),
-            'inventory.purchasing_desc'.tr(),
-            Icons.shopping_cart,
-            Colors.brown,
-            () => Navigator.push(context, MaterialPageRoute(builder: (context) => const PurchaseListPage())),
-          ),
-          _buildMenuItem(
-            context,
-            'inventory.debts'.tr(),
-            'inventory.debts_desc'.tr(),
-            Icons.credit_card_off,
-            Colors.red,
-            () => Navigator.push(context, MaterialPageRoute(builder: (context) => const DebtPage())),
-          ),
-          _buildMenuItem(
-            context,
-            'inventory.discounts'.tr(),
-            'inventory.discounts_desc'.tr(),
-            Icons.discount,
-            Colors.teal,
-            () => Navigator.push(context, MaterialPageRoute(builder: (context) => const PromoListPage())),
-          ),
-          _buildMenuItem(
-            context,
-            'inventory.tax_fees'.tr(),
-            'inventory.tax_fees_desc'.tr(),
-            Icons.account_balance,
-            Colors.teal,
-            () => Navigator.push(context, MaterialPageRoute(builder: (context) => const TaxFeesPage())),
-          ),
-          _buildMenuItem(
-            context,
-            'inventory.payment_methods'.tr(),
-            'inventory.payment_methods_desc'.tr(),
-            Icons.payment,
-            Colors.green,
-            () => Navigator.push(context, MaterialPageRoute(builder: (context) => const PaymentMethodListPage())),
-          ),
-          _buildMenuItem(
-            context,
-            'inventory.voucher_management'.tr(),
-            'inventory.voucher_management_desc'.tr(),
-            Icons.card_giftcard,
-            Colors.pink,
-            () => Navigator.push(context, MaterialPageRoute(builder: (context) => const VoucherManagementPage())),
-          ),
-
-          const SizedBox(height: 20),
         ],
       ),
     );
   }
 
-  Widget _buildSectionHeader(BuildContext context, String title) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      child: Text(
-        title,
-        style: TextStyle(
-          color: Theme.of(context).primaryColor,
-          fontWeight: FontWeight.bold,
-          fontSize: 14,
+  Widget _buildAppBar(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withValues(alpha: 0.1),
+            offset: const Offset(0, 2),
+            blurRadius: 10,
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + 8,
+          bottom: 16,
+          left: 16,
+          right: 16,
+        ),
+        child: Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
+              onPressed: () => Navigator.pop(context),
+            ),
+            Expanded(
+              child: Text(
+                'inventory.management'.tr(),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+            ),
+            const SizedBox(width: 48), // Spacer for balance
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildMenuItem(
-    BuildContext context,
-    String title,
-    String subtitle,
-    IconData icon,
-    Color iconColor,
-    VoidCallback onTap,
-  ) {
-    return Column(
-      children: [
-        ListTile(
-          leading: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withValues(alpha: 0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
-            child: Icon(icon, color: iconColor),
-          ),
-          title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-          subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
-          trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
-          onTap: onTap,
+          ],
         ),
-        const Divider(height: 1, indent: 70),
-      ],
+        child: TextField(
+          controller: _searchController,
+          onChanged: (val) => setState(() => _searchQuery = val.toLowerCase()),
+          decoration: InputDecoration(
+            hintText: 'Search features...',
+            prefixIcon: const Icon(Icons.search, color: Colors.grey),
+            border: InputBorder.none,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          ),
+        ),
+      ),
     );
   }
 
-  void _showComingSoon(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('inventory.feature_coming_soon'.tr())),
+  Widget _buildCategoryFilter() {
+    final categories = ['All', 'inventory.master_data'.tr(), 'inventory.inventory_control'.tr(), 'inventory.partners'.tr(), 'inventory.commerce'.tr()];
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: SizedBox(
+        height: 40,
+        child: ListView.builder(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.only(left: 16),
+          itemCount: categories.length,
+          itemBuilder: (context, index) {
+            final cat = categories[index];
+            final isSelected = _selectedCategory == cat;
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: InkWell(
+                onTap: () => setState(() => _selectedCategory = cat),
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: isSelected ? Colors.blue : Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: isSelected ? Colors.blue : Colors.grey.shade200),
+                  ),
+                  child: Text(
+                    cat,
+                    style: TextStyle(
+                      color: isSelected ? Colors.white : Colors.black87,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMenuSection() {
+    final List<Map<String, dynamic>> menuItems = [
+      {
+        'category': 'inventory.master_data'.tr(),
+        'title': 'inventory.categories'.tr(),
+        'desc': 'inventory.categories_desc'.tr(),
+        'icon': Icons.category_rounded,
+        'color': Colors.orange,
+        'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CategoryListPage())),
+      },
+      {
+        'category': 'inventory.master_data'.tr(),
+        'title': 'inventory.items'.tr(),
+        'desc': 'inventory.items_desc'.tr(),
+        'icon': Icons.inventory_2_rounded,
+        'color': Colors.blue,
+        'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ItemListPage())),
+      },
+      {
+        'category': 'inventory.inventory_control'.tr(),
+        'title': 'inventory.stock_management'.tr(),
+        'desc': 'inventory.stock_management_desc'.tr(),
+        'icon': Icons.swap_vert_rounded,
+        'color': Colors.blueGrey,
+        'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StockManagementPage())),
+      },
+      {
+        'category': 'inventory.inventory_control'.tr(),
+        'title': 'inventory.stock_opname'.tr(),
+        'desc': 'inventory.stock_opname_desc'.tr(),
+        'icon': Icons.assignment_turned_in_rounded,
+        'color': Colors.indigo,
+        'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StockManagementPage(isOpname: true))),
+      },
+      {
+        'category': 'inventory.partners'.tr(),
+        'title': 'inventory.customers'.tr(),
+        'desc': 'inventory.customers_desc'.tr(),
+        'icon': Icons.supervisor_account_rounded,
+        'color': Colors.purple,
+        'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CustomerListPage())),
+      },
+      {
+        'category': 'inventory.partners'.tr(),
+        'title': 'inventory.suppliers'.tr(),
+        'desc': 'inventory.suppliers_desc'.tr(),
+        'icon': Icons.local_shipping_rounded,
+        'color': Colors.deepPurple,
+        'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SupplierListPage())),
+      },
+      {
+        'category': 'inventory.commerce'.tr(),
+        'title': 'inventory.purchasing'.tr(),
+        'desc': 'inventory.purchasing_desc'.tr(),
+        'icon': Icons.shopping_basket_rounded,
+        'color': Colors.brown,
+        'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PurchaseListPage())),
+      },
+      {
+        'category': 'inventory.commerce'.tr(),
+        'title': 'inventory.debts'.tr(),
+        'desc': 'inventory.debts_desc'.tr(),
+        'icon': Icons.account_balance_wallet_rounded,
+        'color': Colors.red,
+        'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DebtPage())),
+      },
+      {
+        'category': 'inventory.commerce'.tr(),
+        'title': 'inventory.discounts'.tr(),
+        'desc': 'inventory.discounts_desc'.tr(),
+        'icon': Icons.loyalty_rounded,
+        'color': Colors.teal,
+        'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PromoListPage())),
+      },
+      {
+        'category': 'inventory.commerce'.tr(),
+        'title': 'inventory.tax_fees'.tr(),
+        'desc': 'inventory.tax_fees_desc'.tr(),
+        'icon': Icons.receipt_long_rounded,
+        'color': Colors.teal,
+        'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TaxFeesPage())),
+      },
+      {
+        'category': 'inventory.commerce'.tr(),
+        'title': 'inventory.payment_methods'.tr(),
+        'desc': 'inventory.payment_methods_desc'.tr(),
+        'icon': Icons.payments_rounded,
+        'color': Colors.green,
+        'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PaymentMethodListPage())),
+      },
+      {
+        'category': 'inventory.commerce'.tr(),
+        'title': 'inventory.voucher_management'.tr(),
+        'desc': 'inventory.voucher_management_desc'.tr(),
+        'icon': Icons.card_membership_rounded,
+        'color': Colors.pink,
+        'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const VoucherManagementPage())),
+      },
+    ];
+
+    final filteredItems = menuItems.where((item) {
+      final matchesSearch = item['title'].toString().toLowerCase().contains(_searchQuery) ||
+                            item['desc'].toString().toLowerCase().contains(_searchQuery);
+      final matchesCategory = _selectedCategory == 'All' || item['category'] == _selectedCategory;
+      return matchesSearch && matchesCategory;
+    }).toList();
+
+    if (filteredItems.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(32.0),
+        child: Center(child: Text('No management features found.', style: TextStyle(color: Colors.grey))),
+      );
+    }
+
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      itemCount: filteredItems.length,
+      itemBuilder: (context, index) {
+        final item = filteredItems[index];
+        return _buildModernMenuCard(item);
+      },
+    );
+  }
+
+  Widget _buildModernMenuCard(Map<String, dynamic> item) {
+    final color = item['color'] as Color;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.05),
+            offset: const Offset(0, 4),
+            blurRadius: 10,
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: item['onTap'],
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Icon(item['icon'], color: color, size: 28),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item['title'],
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        item['desc'],
+                        style: const TextStyle(fontSize: 13, color: Colors.grey),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
+
